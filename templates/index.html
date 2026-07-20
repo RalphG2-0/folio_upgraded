@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Folio — PDF Reader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════════════════════════ -->
+<aside id="sidebar" class="sidebar open">
+  <div class="sidebar-header">
+    <span class="logo">FOLIO</span>
+    <div class="sidebar-header-actions">
+      <button id="sidebarToggle" class="icon-btn" title="Toggle sidebar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Sidebar tabs -->
+  <div class="sidebar-tabs">
+    <button class="stab active" data-tab="library" title="Library">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      Library
+    </button>
+    <button class="stab" data-tab="toc" title="Table of Contents">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Contents
+    </button>
+    <button class="stab" data-tab="thumbs" title="Page thumbnails">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Pages
+    </button>
+  </div>
+
+  <!-- Library tab -->
+  <div class="stab-panel active" id="panel-library">
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept=".pdf" multiple hidden>
+      <div class="upload-inner" id="uploadInner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p>Drop PDFs here<br><small>or click to browse</small></p>
+      </div>
+    </div>
+    <div class="sidebar-section-label">LIBRARY</div>
+    <ul class="file-list" id="fileList"></ul>
+
+    <!-- Options -->
+    <div class="sidebar-bottom">
+      <div class="sidebar-section-label">OPTIONS</div>
+      <div class="option-row">
+        <span>Dark mode</span>
+        <button class="toggle-btn active" id="themeToggle"><span class="toggle-knob"></span></button>
+      </div>
+      <div class="option-row">
+        <span>Continuous scroll</span>
+        <button class="toggle-btn active" id="continuousToggle"><span class="toggle-knob"></span></button>
+      </div>
+      <div class="option-row">
+        <span>Two-page view</span>
+        <button class="toggle-btn" id="twoPageToggle"><span class="toggle-knob"></span></button>
+      </div>
+      <div class="option-row">
+        <span>Page numbers</span>
+        <button class="toggle-btn active" id="pageNumToggle"><span class="toggle-knob"></span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOC tab -->
+  <div class="stab-panel" id="panel-toc">
+    <div class="toc-empty" id="tocEmpty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="36" height="36"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      <p>No outline available</p>
+    </div>
+    <ul class="toc-list" id="tocList"></ul>
+  </div>
+
+  <!-- Thumbnails tab -->
+  <div class="stab-panel" id="panel-thumbs">
+    <div class="thumb-grid" id="thumbGrid"></div>
+    <div class="thumb-loading" id="thumbLoading">
+      <div class="spinner-sm"></div><span>Loading pages…</span>
+    </div>
+  </div>
+</aside>
+
+<!-- ══════════════════════════════════════════════════════════════
+     TOP TOOLBAR
+══════════════════════════════════════════════════════════════ -->
+<div class="toolbar" id="toolbar">
+  <button class="icon-btn" id="sidebarToggleTop" title="Toggle sidebar (S)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <!-- Autoscroll launch -->
+  <button class="icon-btn" id="autoscrollBtn" title="Autoscroll (A)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+  </button>
+
+  <div class="toolbar-center" id="toolbarCenter">
+    <span class="doc-title" id="docTitle">No document open</span>
+  </div>
+
+  <div class="toolbar-right">
+    <!-- Search -->
+    <button class="icon-btn" id="searchToggleBtn" title="Search (Ctrl+F)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+
+    <!-- Zoom controls -->
+    <div class="zoom-group">
+      <button class="icon-btn" id="zoomOut" title="Zoom out (-)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+      </button>
+      <button class="zoom-label" id="zoomLabel" title="Reset zoom (0)">100%</button>
+      <button class="icon-btn" id="zoomIn" title="Zoom in (+)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/><line x1="11" y1="8" x2="11" y2="14"/></svg>
+      </button>
+    </div>
+
+    <!-- Page indicator -->
+    <div class="page-indicator" id="pageIndicator" style="display:none">
+      <input type="number" id="pageInput" min="1" value="1"> /
+      <span id="totalPages">—</span>
+    </div>
+
+    <!-- Fit modes -->
+    <button class="icon-btn" id="fitWidth" title="Fit width (W)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
+    </button>
+    <button class="icon-btn" id="fitPage" title="Fit page (P)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>
+    </button>
+
+    <!-- Download -->
+    <button class="icon-btn" id="downloadBtn" title="Download PDF" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    </button>
+
+    <!-- Info -->
+    <button class="icon-btn" id="infoBtn" title="Document info (I)" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </button>
+
+    <!-- Fullscreen -->
+    <button class="icon-btn" id="fullscreenBtn" title="Fullscreen (F)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="fsIcon"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
+    </button>
+
+    <!-- Prev / Next file -->
+    <button class="icon-btn" id="prevFile" title="Previous file (←)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <button class="icon-btn" id="nextFile" title="Next file (→)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SEARCH BAR
+══════════════════════════════════════════════════════════════ -->
+<div class="search-bar" id="searchBar">
+  <div class="search-inner">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="searchInput" placeholder="Search in document…" autocomplete="off">
+    <span class="search-count" id="searchCount"></span>
+    <button class="icon-btn" id="searchClose">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="search-results" id="searchResults"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     MAIN VIEWER
+══════════════════════════════════════════════════════════════ -->
+<main class="viewer-main" id="viewerMain">
+  <div class="viewer-scroll" id="viewerScroll">
+    <!-- Empty state -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">
+        <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5" width="72" height="72">
+          <rect x="12" y="4" width="32" height="44" rx="3"/>
+          <rect x="20" y="16" width="28" height="44" rx="3"/>
+          <line x1="16" y1="20" x2="36" y2="20"/>
+          <line x1="16" y1="28" x2="36" y2="28"/>
+          <line x1="16" y1="36" x2="28" y2="36"/>
+        </svg>
+      </div>
+      <h2>No PDF open</h2>
+      <p>Upload a PDF from the sidebar, or drop files anywhere on this page.</p>
+      <button class="btn-primary" id="emptyUploadBtn">Choose PDFs</button>
+    </div>
+
+    <!-- Pages container -->
+    <div class="pages-container" id="pagesContainer" style="display:none"></div>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="read-progress" id="readProgress">
+    <div class="read-progress-bar" id="readProgressBar"></div>
+  </div>
+</main>
+
+<!-- ══════════════════════════════════════════════════════════════
+     DOCUMENT INFO PANEL
+══════════════════════════════════════════════════════════════ -->
+<div class="info-panel" id="infoPanel">
+  <div class="info-panel-header">
+    <span>Document Info</span>
+    <button class="icon-btn" id="infoClose">✕</button>
+  </div>
+  <div class="info-panel-body" id="infoPanelBody"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     LOADING OVERLAY
+══════════════════════════════════════════════════════════════ -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <p id="loadingText">Loading…</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     KEYBOARD SHORTCUTS PANEL
+══════════════════════════════════════════════════════════════ -->
+<div class="shortcuts-panel" id="shortcutsPanel">
+  <div class="shortcuts-header">
+    <span>Keyboard Shortcuts</span>
+    <button class="icon-btn" id="closeShortcuts">✕</button>
+  </div>
+  <div class="shortcuts-grid">
+    <kbd>+</kbd><span>Zoom in</span>
+    <kbd>-</kbd><span>Zoom out</span>
+    <kbd>0</kbd><span>Reset zoom</span>
+    <kbd>W</kbd><span>Fit width</span>
+    <kbd>P</kbd><span>Fit page</span>
+    <kbd>F</kbd><span>Fullscreen</span>
+    <kbd>S</kbd><span>Toggle sidebar</span>
+    <kbd>Ctrl+F</kbd><span>Search</span>
+    <kbd>I</kbd><span>Document info</span>
+    <kbd>←</kbd><span>Previous file</span>
+    <kbd>→</kbd><span>Next file</span>
+    <kbd>D</kbd><span>Toggle dark mode</span>
+    <kbd>A</kbd><span>Autoscroll widget</span>
+    <kbd>Space</kbd><span>Play / pause scroll</span>
+    <kbd>[</kbd> / <kbd>]</kbd><span>Slower / faster</span>
+    <kbd>?</kbd><span>This panel</span>
+    <kbd>Esc</kbd><span>Close panels</span>
+  </div>
+</div>
+
+<!-- Help button -->
+<button class="help-btn" id="helpBtn" title="Keyboard shortcuts (?)">?</button>
+
+<!-- ══════════════════════════════════════════════════════════════
+     AUTOSCROLL WIDGET
+══════════════════════════════════════════════════════════════ -->
+<div class="autoscroll-widget" id="autoscrollWidget">
+  <button class="as-toggle" id="asToggle" title="Play / Pause (Space)">
+    <!-- Play icon (shown when paused) -->
+    <svg class="as-icon-play" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    <!-- Pause icon (shown when playing) -->
+    <svg class="as-icon-pause" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+  </button>
+
+  <div class="as-sep"></div>
+
+  <div class="as-speed-group">
+    <button class="as-step" id="asSlower" title="Slower ([)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+    <input  class="as-speed-input" id="asSpeedInput" type="number" min="10" max="2000" value="80" title="Scroll speed (px/s)">
+    <span   class="as-speed-unit">px/s</span>
+    <button class="as-step" id="asFaster" title="Faster (])">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+  </div>
+
+  <div class="as-sep"></div>
+
+  <button class="as-close" id="asClose" title="Dismiss">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+</div>
+
+<!-- Autoscroll trigger button (bottom-left of toolbar) -->
+<script src="/static/js/app.js"></script>
+</body>
+</html>
