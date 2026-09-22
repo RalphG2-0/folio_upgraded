@@ -6,10 +6,13 @@ Then open http://localhost:5000
 
 import io
 import re
+import sys
 import base64
 import hashlib
 import threading
 import json
+import socket
+import time
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 
@@ -17,9 +20,25 @@ from flask import Flask, render_template, request, jsonify, abort, make_response
 import pypdfium2 as pdfium
 from PIL import Image
 
+try:
+    import webview  # pywebview — only needed for the desktop-app entry point below
+except ImportError:
+    webview = None
+
 # ── Config ───────────────────────────────────────────────────────────
-UPLOAD_FOLDER  = Path(__file__).parent / "uploads"
-UPLOAD_FOLDER.mkdir(exist_ok=True)
+# When PyInstaller runs a --onefile build, the app is unpacked into a
+# temp dir at sys._MEIPASS — that's where bundled templates/static live.
+# Uploaded PDFs must NOT live there: that temp dir is wiped when the app
+# closes, so uploads go in a persistent per-user data folder instead.
+if getattr(sys, "frozen", False):
+    BASE_DIR = Path(sys._MEIPASS)
+    DATA_DIR = Path.home() / ".folio_pdf_reader"
+else:
+    BASE_DIR = Path(__file__).parent
+    DATA_DIR = BASE_DIR
+
+UPLOAD_FOLDER  = DATA_DIR / "uploads"
+UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 ALLOWED_EXT    = {".pdf"}
 MAX_BATCH      = 6
 JPEG_QUALITY   = 85
@@ -27,7 +46,11 @@ THUMB_QUALITY  = 70
 RENDER_THREADS = 4
 THUMB_SCALE    = 0.3    # scale for sidebar thumbnails
 
-app = Flask(__name__)
+app = Flask(
+    __name__,
+    template_folder=str(BASE_DIR / "templates"),
+    static_folder=str(BASE_DIR / "static"),
+)
 app.config["MAX_CONTENT_LENGTH"] = 300 * 1024 * 1024   # 300 MB
 
 # ── Thread pool ──────────────────────────────────────────────────────
@@ -388,6 +411,50 @@ def api_info(filename):
     })
 
 
+def _find_free_port(start=5000, tries=20):
+    """Pick a free localhost port, starting at `start`, in case 5000 is taken."""
+    for port in range(start, start + tries):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(("127.0.0.1", port)) != 0:
+                return port
+    return start  # fall back and hope for the best
+
+
+def _run_flask(port):
+    # use_reloader must be off: the reloader spawns a second process, which
+    # breaks both the pdfium lock/doc-cache singletons and the packaged exe.
+    app.run(host="127.0.0.1", port=port, debug=False, threaded=True, use_reloader=False)
+
+
+def _wait_for_server(port, timeout=10):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(("127.0.0.1", port)) == 0:
+                return True
+        time.sleep(0.05)
+    return False
+
+
 if __name__ == "__main__":
-    print("\n🚀  FOLIO running at http://localhost:5000\n")
-    app.run(debug=False, port=5000, threaded=True)
+    port = _find_free_port()
+    threading.Thread(target=_run_flask, args=(port,), daemon=True).start()
+    _wait_for_server(port)
+
+    if webview is not None:
+        # Desktop app mode: native OS window, no browser chrome.
+        webview.create_window(
+            "FOLIO — PDF Reader",
+            f"http://127.0.0.1:{port}",
+            width=1280,
+            height=850,
+            min_size=(800, 600),
+        )
+        webview.start()
+    else:
+        # Fallback for plain `python app.py` without pywebview installed —
+        # behaves like the original dev server.
+        print(f"\n🚀  FOLIO running at http://127.0.0.1:{port}\n")
+        print("    (install `pywebview` for the native app window: pip install pywebview)\n")
+        while True:
+            time.sleep(1)

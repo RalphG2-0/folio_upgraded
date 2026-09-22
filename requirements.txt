@@ -1,3 +1,5 @@
 pypdfium2
 flask
 Pillow
+pywebview
+pyinstaller
